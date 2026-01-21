@@ -1,19 +1,23 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from db import SessionLocal
-from models import Task, TaskComment, TaskAttachment, Status, Priority, Report, User, Project
+from db import SessionLocal, engine, Base
+from models import Task, TaskComment, TaskAttachment, Status, Priority, Report, User, Project, Member
 from datetime import datetime, date
 from pydantic import BaseModel
-from models import Member
-from schemas import MemberCreate, MemberOut
+from schemas import MemberCreate, MemberOut, TaskCreate, ProjectCreate
 from sqlalchemy import text
-from schemas import TaskCreate, ProjectCreate
 import shutil, os
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------- SCHEMAS ----------------
 
 class LoginRequest(BaseModel):
+    email: str
+    password: str
+    role: str
+
+class RegisterRequest(BaseModel):
+    name: str
     email: str
     password: str
     role: str
@@ -36,12 +40,11 @@ class ProjectCreate(BaseModel):
 
 app = FastAPI()
 
+Base.metadata.create_all(bind=engine)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -155,12 +158,15 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     print("FRONTEND →", email, password, role)
 
     if not user:
+        print(f"Login failed: Email {email} not found")
         raise HTTPException(401,"Email not found")
 
     if user.password != password:
+        print(f"Login failed: Password incorrect for {email}")
         raise HTTPException(401,"Password incorrect")
 
     if user.role != role:
+        print(f"Login failed: Role mismatch. Expected {user.role}, got {role}")
         raise HTTPException(401,"Role incorrect")
 
     user.login_count = (user.login_count or 0) + 1
@@ -192,17 +198,23 @@ def logout(user_id:int, db:Session=Depends(get_db)):
 # ---------------- REGISTER ----------------
 
 @app.post("/register/")
-def register(name:str, email:str, password:str, role:str, db:Session=Depends(get_db)):
+def register(data: RegisterRequest, db:Session=Depends(get_db)):
+    
+    # Check if user exists
+    if db.query(User).filter(User.email==data.email).first():
+        raise HTTPException(400, "User already exists")
 
-    if db.query(User).filter(User.email==email).first():
-        raise HTTPException(400,"User already exists")
-
-    new_user = User(name=name,email=email,password=password,role=role.lower())
+    new_user = User(
+        name=data.name,
+        email=data.email,
+        password=data.password,
+        role=data.role.lower()
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    return {"message":"User registered successfully"}
+    return {"message": "User registered successfully"}
 
 @app.post("/members/", response_model=MemberOut)
 def create_member(m: MemberCreate, db: Session = Depends(get_db)):
@@ -334,32 +346,12 @@ def manager_tasks(db:Session=Depends(get_db)):
     return db.query(Task).filter(Task.created_by_role=="admin").all()
 
 
-@app.put("/tasks/assign/{task_id}")
-def assign_task(task_id:int, member_id:int, db:Session=Depends(get_db)):
-
-    task = db.query(Task).filter(Task.id==task_id).first()
-
-    if not task:
-        raise HTTPException(404,"Task not found")
-
-    task.assigned_to = member_id
-    db.commit()
-
-    return {"message":"Task assigned successfully"}
-
 @app.get("/manager/projects/")
 def manager_projects(db:Session=Depends(get_db)):
     return db.query(Project).all()
 
-@app.put("/manager/update-status/")
-def update_status(task_id:int, status:str, db:Session=Depends(get_db)):
-    task = db.query(Task).filter(Task.id==task_id).first()
-    task.status = status
-    db.commit()
-    return {"message":"Status updated"}
-
 @app.put("/manager/update-task-status/{task_id}")
-def update_task_status(task_id:int, status:str, db:Session=Depends(get_db)):
+def update_task_status_manager(task_id:int, status:str, db:Session=Depends(get_db)):
     task = db.query(Task).filter(Task.id==task_id).first()
     if not task:
         raise HTTPException(404,"Task not found")
@@ -369,31 +361,12 @@ def update_task_status(task_id:int, status:str, db:Session=Depends(get_db)):
     db.refresh(task)
     return task
 
-@app.put("/admin/assign-task/{task_id}")
-def assign_task(task_id:int, member_id:int, db:Session=Depends(get_db)):
-    task = db.query(Task).filter(Task.id==task_id).first()
-    task.assigned_to = member_id
-    db.commit()
-    return task
-@app.put("/manager/update-status/")
-def update_task_status(task_id:int, status:str, db:Session=Depends(get_db)):
-    task = db.query(Task).filter(Task.id==task_id).first()
-    if not task:
-        raise HTTPException(404,"Task not found")
-
-    task.status = status
-    db.commit()
-    return {"message":"Status updated"}
-@app.post("/manager/create-task/")
-def create_task(task: TaskCreate, db:Session=Depends(get_db)):
-    new = Task(**task.dict())
-    db.add(new)
-    db.commit()
-    return new
-
 @app.put("/manager/update-task/{id}")
-def update_task(id:int, data:dict, db:Session=Depends(get_db)):
+def update_task_manager(id:int, data:dict, db:Session=Depends(get_db)):
     t = db.query(Task).filter(Task.id==id).first()
+    if not t:
+         raise HTTPException(404,"Task not found")
+         
     if "status" in data:
         t.status = data["status"]
     if "assigned_to" in data:
@@ -403,7 +376,7 @@ def update_task(id:int, data:dict, db:Session=Depends(get_db)):
     if "comment" in data and data["comment"]:
         new_comment = TaskComment(
             task_id=id,
-            user_id=1,  # Assuming manager id, but need to get from auth
+            user_id=1,  # Placeholder: In real app, get from current_user
             comment_text=data["comment"]
         )
         db.add(new_comment)
@@ -412,14 +385,16 @@ def update_task(id:int, data:dict, db:Session=Depends(get_db)):
     return {"message": "Updated"}
 
 @app.delete("/manager/delete-task/{id}")
-def delete_task(id:int, db:Session=Depends(get_db)):
+def delete_task_manager(id:int, db:Session=Depends(get_db)):
     t=db.query(Task).filter(Task.id==id).first()
+    if not t:
+        raise HTTPException(404, "Task not found")
     db.delete(t)
     db.commit()
     return {"msg":"deleted"}
 
-@app.post("/manager/create-task/")
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+@app.post("/manager/create-task-manager/")
+def create_task_manager(task: TaskCreate, db: Session = Depends(get_db)):
     new_task = Task(
         title=task.title,
         description=task.description,
@@ -432,11 +407,4 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_task)
     return new_task
-
-@app.put("/manager/update-task-status/{task_id}")
-def update_task_status(task_id:int, status:str, db:Session=Depends(get_db)):
-    task=db.query(Task).filter(Task.id==task_id).first()
-    task.status=status
-    db.commit()
-    return {"msg":"updated"}
 

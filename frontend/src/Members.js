@@ -14,36 +14,22 @@ function Members({ refreshDashboard }) {
 
   // ---------- FETCH MEMBERS ----------
   const fetchMembers = () => {
-  fetch(API + "/members/")
-    .then(res => {
-      console.log("Response status:", res.status);
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      console.log("RAW API:", data);
-
-      if (Array.isArray(data)) {
-        console.log("Setting members:", data);
-        setMembers(data);
-      } 
-      else if (data.members) {
-        setMembers(data.members);
-      }
-      else if (data.data) {
-        setMembers(data.data);
-      }
-      else {
+    fetch(API + "/members/")
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) setMembers(data);
+        else if (data.members) setMembers(data.members);
+        else if (data.data) setMembers(data.data);
+        else setMembers([]);
+      })
+      .catch(error => {
+        console.error("Error fetching members:", error);
         setMembers([]);
-      }
-    })
-    .catch(error => {
-      console.error("Error fetching members:", error);
-      setMembers([]);
-    });
-};
+      });
+  };
 
   useEffect(() => {
     fetchMembers();
@@ -51,7 +37,6 @@ function Members({ refreshDashboard }) {
 
   // ---------- SAVE MEMBER ----------
   const saveMember = () => {
-
     const method = editId ? "PUT" : "POST";
     const url = editId
       ? API + "/members/" + editId
@@ -69,12 +54,12 @@ function Members({ refreshDashboard }) {
         is_active: status === "Active"
       })
     })
-    .then(res => res.json())
-    .then(() => {
-      clearForm();
-      fetchMembers();
-      if (refreshDashboard) refreshDashboard();
-    });
+      .then(res => res.json())
+      .then(() => {
+        clearForm();
+        fetchMembers();
+        if (refreshDashboard) refreshDashboard();
+      });
   };
 
   // ---------- DELETE ----------
@@ -103,179 +88,110 @@ function Members({ refreshDashboard }) {
   return (
     <div>
 
-      <h2 style={{color:"#1e40af"}}>👥 Members Management</h2>
+      <h2 className="page-title">👥 Members Management</h2>
 
       {/* STATS */}
-      <div style={{display:"flex",gap:"20px",marginBottom:"20px"}}>
-        <StatCard title="Total Members" value={total} />
-        <StatCard title="Active" value={active} />
-        <StatCard title="Inactive" value={inactive} />
+      <div className="grid-3 mb-4">
+        <StatCard title="Total Members" value={total} color="var(--primary)" />
+        <StatCard title="Active Members" value={active} color="var(--success)" />
+        <StatCard title="Inactive Members" value={inactive} color="var(--danger)" />
       </div>
 
       {/* FORM */}
-      <div style={cardStyle}>
-        <h3>{editId ? "Update Member" : "Create Member"}</h3>
+      <div className="card" style={{ maxWidth: "500px" }}>
+        <h3 className="section-title">{editId ? "Update Member" : "Create Member"}</h3>
 
-        <input placeholder="Name" value={name}
-          onChange={e=>setName(e.target.value)} style={inputBox}/>
+        <div className="form-group">
+          <input className="input-box" placeholder="Name" value={name}
+            onChange={e => setName(e.target.value)} />
+        </div>
 
-        <input placeholder="Email" value={email}
-          onChange={e=>setEmail(e.target.value)} style={inputBox}/>
+        <div className="form-group">
+          <input className="input-box" placeholder="Email" value={email}
+            onChange={e => setEmail(e.target.value)} />
+        </div>
 
-        <input placeholder="Position" value={position}
-          onChange={e=>setPosition(e.target.value)} style={inputBox}/>
+        <div className="form-group">
+          <input className="input-box" placeholder="Position" value={position}
+            onChange={e => setPosition(e.target.value)} />
+        </div>
 
-        <select value={status}
-          onChange={e=>setStatus(e.target.value)} style={inputBox}>
-          <option>Active</option>
-          <option>Inactive</option>
-        </select>
+        <div className="form-group">
+          <select className="input-box" value={status}
+            onChange={e => setStatus(e.target.value)}>
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
 
-        <button style={saveBtn} onClick={saveMember}>
-          {editId ? "Update Member" : "+ Create Member"}
-        </button>
-
-        {editId && <button style={cancelBtn} onClick={clearForm}>Cancel</button>}
+        <div className="flex gap-2">
+          <button className="btn btn-primary" onClick={saveMember}>
+            {editId ? "Update Member" : "+ Create Member"}
+          </button>
+          {editId && <button className="btn btn-secondary" onClick={clearForm}>Cancel</button>}
+        </div>
       </div>
 
       {/* TABLE */}
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            {["ID","Name","Email","Position","Status","Action"].map(h =>
-              <th key={h} style={thStyle}>{h}</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {members.map(m => (
-            <tr key={m.id}>
-              <td style={tdStyle}>{m.id}</td>
-              <td style={tdStyle}>{m.name}</td>
-              <td style={tdStyle}>{m.email}</td>
-              <td style={tdStyle}>{m.position}</td>
-
-              <td style={{
-                ...tdStyle,
-                color: m.is_active ? "green" : "red",
-                fontWeight:"bold"
-              }}>
-                {m.is_active ? "Active" : "Inactive"}
-              </td>
-
-              <td style={tdStyle}>
-                <button style={updateBtn} onClick={()=>{
-                  setEditId(m.id);
-                  setName(m.name);
-                  setEmail(m.email);
-                  setPosition(m.position);
-                  setStatus(m.is_active===1?"Active":"Inactive");
-                }}>
-                  Update
-                </button>{" "}
-
-                <button style={deleteBtn} onClick={()=>deleteMember(m.id)}>
-                  Delete
-                </button>
-              </td>
+      <div className="table-container">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Position</th>
+              <th>Status</th>
+              <th>Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {members.map(m => (
+              <tr key={m.id}>
+                <td>{m.id}</td>
+                <td style={{ fontWeight: 500 }}>{m.name}</td>
+                <td>{m.email}</td>
+                <td>{m.position}</td>
+                <td>
+                  <span className={`badge ${m.is_active ? "badge-active" : "badge-inactive"}`}>
+                    {m.is_active ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td>
+                  <div className="flex gap-2">
+                    <button className="btn btn-success" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }} onClick={() => {
+                      setEditId(m.id);
+                      setName(m.name);
+                      setEmail(m.email);
+                      setPosition(m.position);
+                      setStatus(m.is_active === 1 ? "Active" : "Active"); // Assuming 1/0 or bool, treating as active for now? Logic was m.is_active===1
+                      // Wait, original logic: setStatus(m.is_active===1?"Active":"Inactive");
+                      // But let's check m.is_active type. If boolean:
+                      setStatus(m.is_active ? "Active" : "Inactive");
+                    }}>
+                      Edit
+                    </button>
+                    <button className="btn btn-danger" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }} onClick={() => deleteMember(m.id)}>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
     </div>
   );
 }
 
 /* ---------- STAT CARD ---------- */
-const StatCard = ({title,value}) => (
-  <div style={{
-    background:"white",
-    padding:"15px",
-    borderRadius:"10px",
-    boxShadow:"0 4px 10px rgba(0,0,0,0.1)",
-    width:"160px",
-    textAlign:"center"
-  }}>
-    <p style={{color:"#777"}}>{title}</p>
-    <h2>{value}</h2>
+const StatCard = ({ title, value, color }) => (
+  <div className="card stat-card" style={{ marginBottom: 0, textAlign: "center", borderTop: `4px solid ${color}` }}>
+    <p style={{ color: "var(--text-secondary)", marginBottom: "0.5rem", fontSize: "0.9rem" }}>{title}</p>
+    <h2 style={{ fontSize: "2rem", margin: 0, color: "var(--text-main)" }}>{value}</h2>
   </div>
 );
-
-/* ---------- STYLES ---------- */
-
-const cardStyle = {
-  background:"white",
-  padding:"20px",
-  borderRadius:"12px",
-  boxShadow:"0 4px 10px rgba(0,0,0,0.15)",
-  width:"420px",
-  marginBottom:"25px"
-};
-
-const inputBox = {
-  width:"100%",
-  padding:"10px",
-  marginBottom:"12px",
-  borderRadius:"6px",
-  border:"1px solid #ccc"
-};
-
-const saveBtn = {
-  background:"#2563eb",
-  color:"white",
-  border:"none",
-  padding:"10px 15px",
-  borderRadius:"8px",
-  cursor:"pointer",
-  marginRight:"10px"
-};
-
-const cancelBtn = {
-  background:"gray",
-  color:"white",
-  border:"none",
-  padding:"10px 15px",
-  borderRadius:"8px",
-  cursor:"pointer"
-};
-
-const tableStyle = {
-  width:"100%",
-  borderCollapse:"collapse",
-  background:"white",
-  boxShadow:"0 4px 10px rgba(0,0,0,0.15)"
-};
-
-const thStyle = {
-  background:"#2563eb",
-  color:"white",
-  padding:"10px"
-};
-
-const tdStyle = {
-  padding:"10px",
-  textAlign:"center",
-  borderBottom:"1px solid #ddd"
-};
-
-const updateBtn = {
-  background:"green",
-  color:"white",
-  border:"none",
-  padding:"6px 10px",
-  borderRadius:"6px",
-  cursor:"pointer",
-  marginRight:"6px"
-};
-
-const deleteBtn = {
-  background:"red",
-  color:"white",
-  border:"none",
-  padding:"6px 10px",
-  borderRadius:"6px",
-  cursor:"pointer"
-};
 
 export default Members;

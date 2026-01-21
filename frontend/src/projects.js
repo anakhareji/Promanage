@@ -59,188 +59,132 @@ function Projects() {
   return (
     <div>
 
-      <h2 style={titleStyle}>📁 Project Management</h2>
+      <h2 className="page-title">📁 Project Management</h2>
 
       {/* FORM CARD */}
-      <div style={cardStyle}>
+      <div className="card" style={{ maxWidth: "500px" }}>
 
-        <h3>{editId ? "Update Project" : "Create Project"}</h3>
+        <h3 className="section-title">{editId ? "Update Project" : "Create Project"}</h3>
 
-        <input
-          placeholder="Project Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          style={inputBox}
-        />
+        <div className="form-group">
+          <input
+            className="input-box"
+            placeholder="Project Name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
+        </div>
 
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          style={inputBox}
-        />
+        <div className="form-group">
+          <textarea
+            className="input-box"
+            placeholder="Description"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows="3"
+            style={{ fontFamily: "inherit" }}
+          />
+        </div>
 
-        <select
-          value={status}
-          onChange={e => setStatus(e.target.value)}
-          style={inputBox}
-        >
-          <option>Not Started</option>
-          <option>In Progress</option>
-          <option>Completed</option>
-        </select>
+        <div className="form-group">
+          <select
+            className="input-box"
+            value={status}
+            onChange={e => setStatus(e.target.value)}
+          >
+            <option>Not Started</option>
+            <option>In Progress</option>
+            <option>Completed</option>
+          </select>
+        </div>
 
-        <input
-          type="date"
-          value={deadline}
-          onChange={e => setDeadline(e.target.value)}
-          style={inputBox}
-        />
+        <div className="form-group">
+          <input
+            className="input-box"
+            type="date"
+            value={deadline}
+            onChange={e => setDeadline(e.target.value)}
+          />
+        </div>
 
-        <button style={saveBtn} onClick={saveProject}>
-          {editId ? "Update Project" : "+ Create Project"}
-        </button>
-
-        {editId && (
-          <button style={cancelBtn} onClick={clearForm}>
-            Cancel Edit
+        <div className="flex gap-2">
+          <button className="btn btn-primary" onClick={saveProject}>
+            {editId ? "Update Project" : "+ Create Project"}
           </button>
-        )}
+
+          {editId && (
+            <button className="btn btn-secondary" onClick={clearForm}>
+              Cancel
+            </button>
+          )}
+        </div>
 
       </div>
 
       {/* TABLE */}
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th style={thStyle}>ID</th>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Description</th>
-            <th style={thStyle}>Status</th>
-            <th style={thStyle}>Deadline</th>
-            <th style={thStyle}>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {projects.map(p => (
-            <tr key={p.id}>
-              <td style={tdStyle}>{p.id}</td>
-              <td style={tdStyle}>{p.name}</td>
-              <td style={tdStyle}>{p.description}</td>
-              <td style={tdStyle}>{p.status}</td>
-              <td style={tdStyle}>{p.deadline}</td>
-              <td style={tdStyle}>
-
-                <button
-                  style={updateBtn}
-                  onClick={() => {
-                    setEditId(p.id);
-                    setName(p.name);
-                    setDescription(p.description);
-                    setStatus(p.status);
-                    setDeadline(p.deadline);
-                  }}
-                >
-                  Update
-                </button>
-
-                <button
-                  style={deleteBtn}
-                  onClick={() => deleteProject(p.id)}
-                >
-                  Delete
-                </button>
-
-              </td>
+      <div className="table-container">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Deadline</th>
+              <th>Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {projects.map(p => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td style={{ fontWeight: 500 }}>{p.name}</td>
+                <td style={{ maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {p.description}
+                </td>
+                <td>
+                  <span className={`badge ${
+                    p.status === "Completed" ? "badge-completed" : 
+                    p.status === "In Progress" ? "badge-active" : "badge-pending"
+                  }`}>
+                    {p.status}
+                  </span>
+                </td>
+                <td>{p.deadline}</td>
+                <td>
+                  <div className="flex gap-2">
+                    <button
+                      className="btn btn-success"
+                      style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
+                      onClick={() => {
+                        setEditId(p.id);
+                        setName(p.name);
+                        setDescription(p.description);
+                        setStatus(p.status);
+                        setDeadline(p.deadline);
+                      }}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      className="btn btn-danger"
+                      style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
+                      onClick={() => deleteProject(p.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
     </div>
   );
 }
-
-/* ---------- STYLES ---------- */
-
-const titleStyle = {
-  marginBottom: "20px",
-  color: "#1e40af"
-};
-
-const cardStyle = {
-  background: "white",
-  padding: "20px",
-  borderRadius: "12px",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-  marginBottom: "25px",
-  width: "420px"
-};
-
-const inputBox = {
-  width: "100%",
-  padding: "10px",
-  marginBottom: "12px",
-  borderRadius: "6px",
-  border: "1px solid #ccc"
-};
-
-const saveBtn = {
-  background: "#2563eb",
-  color: "white",
-  border: "none",
-  padding: "10px 15px",
-  borderRadius: "8px",
-  cursor: "pointer",
-  marginRight: "10px"
-};
-
-const cancelBtn = {
-  background: "gray",
-  color: "white",
-  border: "none",
-  padding: "10px 15px",
-  borderRadius: "8px",
-  cursor: "pointer"
-};
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  background: "white",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.15)"
-};
-
-const thStyle = {
-  background: "#2563eb",
-  color: "white",
-  padding: "10px"
-};
-
-const tdStyle = {
-  padding: "10px",
-  textAlign: "center",
-  borderBottom: "1px solid #ddd"
-};
-
-const updateBtn = {
-  background: "green",
-  color: "white",
-  border: "none",
-  padding: "6px 10px",
-  borderRadius: "6px",
-  marginRight: "6px",
-  cursor: "pointer"
-};
-
-const deleteBtn = {
-  background: "red",
-  color: "white",
-  border: "none",
-  padding: "6px 10px",
-  borderRadius: "6px",
-  cursor: "pointer"
-};
 
 export default Projects;

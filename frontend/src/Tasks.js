@@ -24,41 +24,43 @@ function Tasks({ refreshDashboard }) {
 
   // CREATE
   const createTask = () => {
-  if(!title) return alert("Enter title");
+    if (!title) return alert("Enter title");
 
-  fetch(API + "/tasks/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      title: title,
-      description: "",
-      status: status,
-      priority: priority
+    fetch(API + "/tasks/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        description: "",
+        status: status,
+        priority: priority
+      })
     })
-  })
-  .then(r => {
-    if(!r.ok) throw new Error("Create failed");
-    return r.json();
-  })
-  .then(() => {
-    setTitle("");
-    setStatus("Not Started");
-    setPriority("Medium");
-    loadTasks();
-    refreshDashboard();
-  })
-  .catch(err=>{
-    alert("Task create failed");
-    console.log(err);
-  });
-};
+      .then(r => {
+        if (!r.ok) throw new Error("Create failed");
+        return r.json();
+      })
+      .then(() => {
+        setTitle("");
+        setStatus("Not Started");
+        setPriority("Medium");
+        loadTasks();
+        if (refreshDashboard) refreshDashboard();
+      })
+      .catch(err => {
+        alert("Task create failed");
+        console.log(err);
+      });
+  };
 
 
   // DELETE
   const deleteTask = id => {
     fetch(API + "/tasks/" + id, { method: "DELETE" })
       .then(loadTasks)
-      .then(refreshDashboard);
+      .then(() => {
+        if (refreshDashboard) refreshDashboard();
+      });
   };
 
   // UPDATE
@@ -70,94 +72,137 @@ function Tasks({ refreshDashboard }) {
     }).then(() => {
       setEditTask(null);
       loadTasks();
-      refreshDashboard();
+      if (refreshDashboard) refreshDashboard();
     });
   };
 
   return (
     <div>
 
-      <h2 style={{marginBottom:"10px"}}>Task Management</h2>
+      <h2 className="page-title">📋 Task Management</h2>
 
       {/* CREATE FORM */}
-      <div style={createBox}>
-        <input style={input} placeholder="Task Title"
-          value={title} onChange={e=>setTitle(e.target.value)} />
+      <div className="card" style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: "200px" }}>
+          <input className="input-box" placeholder="Task Title"
+            value={title} onChange={e => setTitle(e.target.value)} />
+        </div>
 
-        <select style={input} value={status} onChange={e=>setStatus(e.target.value)}>
-          <option>Not Started</option>
-          <option>Pending</option>
-          <option>Progress</option>
-          <option>Completed</option>
-        </select>
+        <div style={{ width: "150px" }}>
+          <select className="input-box" value={status} onChange={e => setStatus(e.target.value)}>
+            <option>Not Started</option>
+            <option>Pending</option>
+            <option>Progress</option>
+            <option>Completed</option>
+          </select>
+        </div>
 
-        <select style={input} value={priority} onChange={e=>setPriority(e.target.value)}>
-          <option>Low</option>
-          <option>Medium</option>
-          <option>High</option>
-        </select>
+        <div style={{ width: "150px" }}>
+          <select className="input-box" value={priority} onChange={e => setPriority(e.target.value)}>
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
 
-        <button style={createBtn} onClick={createTask}>+ Create Task</button>
+        <button className="btn btn-primary" onClick={createTask}>+ Create Task</button>
       </div>
 
       {/* TABLE */}
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            {["ID","Title","Status","Priority","Action"].map(h=>
-              <th key={h} style={th}>{h}</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map(t=>(
-            <tr key={t.id}>
-              <td style={td}>{t.id}</td>
-              <td style={td}>{t.title}</td>
-              <td style={td}>{t.status}</td>
-              <td style={td}>{t.priority}</td>
-              <td style={td}>
-                <button style={editBtn} onClick={()=>setEditTask({...t})}>Edit</button>{" "}
-                <button style={delBtn} onClick={()=>deleteTask(t.id)}>Delete</button>
-              </td>
+      <div className="table-container">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tasks.map(t => (
+              <tr key={t.id}>
+                <td>{t.id}</td>
+                <td style={{ fontWeight: 500 }}>{t.title}</td>
+                <td>
+                  <span className={`badge ${
+                    t.status === "Completed" ? "badge-completed" :
+                    t.status === "Progress" ? "badge-active" : "badge-pending"
+                  }`}>
+                    {t.status}
+                  </span>
+                </td>
+                <td>
+                  <span className={`badge ${
+                    t.priority === "High" ? "badge-inactive" :
+                    t.priority === "Low" ? "badge-completed" : "badge-pending"
+                  }`}>
+                    {t.priority}
+                  </span>
+                </td>
+                <td>
+                  <div className="flex gap-2">
+                    <button className="btn btn-success" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }} onClick={() => setEditTask({ ...t })}>
+                      Edit
+                    </button>
+                    <button className="btn btn-danger" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }} onClick={() => deleteTask(t.id)}>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* UPDATE MODAL */}
       {editTask &&
-        <div style={modalBg}>
-          <div style={modalCard}>
-            <h3>Edit Task</h3>
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", display: "flex",
+          justifyContent: "center", alignItems: "center", zIndex: 100
+        }}>
+          <div className="card" style={{ width: "400px", marginBottom: 0 }}>
+            <h3 className="section-title">Edit Task</h3>
 
-            <input style={input}
-              value={editTask.title}
-              onChange={e=>setEditTask({...editTask,title:e.target.value})}
-            />
+            <div className="form-group">
+              <label className="form-label">Title</label>
+              <input className="input-box"
+                value={editTask.title}
+                onChange={e => setEditTask({ ...editTask, title: e.target.value })}
+              />
+            </div>
 
-            <select style={input}
-              value={editTask.status}
-              onChange={e=>setEditTask({...editTask,status:e.target.value})}
-            >
-              <option>Not Started</option>
-              <option>Pending</option>
-              <option>Progress</option>
-              <option>Completed</option>
-            </select>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="input-box"
+                value={editTask.status}
+                onChange={e => setEditTask({ ...editTask, status: e.target.value })}
+              >
+                <option>Not Started</option>
+                <option>Pending</option>
+                <option>Progress</option>
+                <option>Completed</option>
+              </select>
+            </div>
 
-            <select style={input}
-              value={editTask.priority}
-              onChange={e=>setEditTask({...editTask,priority:e.target.value})}
-            >
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-            </select>
+            <div className="form-group">
+              <label className="form-label">Priority</label>
+              <select className="input-box"
+                value={editTask.priority}
+                onChange={e => setEditTask({ ...editTask, priority: e.target.value })}
+              >
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </div>
 
-            <div style={{textAlign:"right"}}>
-              <button style={saveBtn} onClick={updateTask}>Update</button>{" "}
-              <button style={cancelBtn} onClick={()=>setEditTask(null)}>Cancel</button>
+            <div className="flex gap-2 justify-between mt-4">
+              <button className="btn btn-secondary" onClick={() => setEditTask(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={updateTask}>Update Task</button>
             </div>
           </div>
         </div>
@@ -166,24 +211,5 @@ function Tasks({ refreshDashboard }) {
     </div>
   );
 }
-const createBox={background:"white",padding:"15px",marginBottom:"20px",borderRadius:"10px",display:"flex",gap:"10px",flexWrap:"wrap"};
-
-const tableStyle={width:"100%",borderCollapse:"collapse",background:"white"};
-const th={background:"#2563eb",color:"white",padding:"10px"};
-const td={padding:"10px",textAlign:"center",borderBottom:"1px solid #ddd"};
-
-const input={padding:"10px",borderRadius:"6px",border:"1px solid #ccc",minWidth:"180px"};
-
-const createBtn={background:"#2563eb",color:"white",border:"none",padding:"10px 16px",borderRadius:"8px"};
-
-const editBtn={background:"green",color:"white",border:"none",padding:"6px 10px",borderRadius:"6px"};
-const delBtn={background:"red",color:"white",border:"none",padding:"6px 10px",borderRadius:"6px"};
-
-const modalBg={position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",justifyContent:"center",alignItems:"center"};
-const modalCard={background:"white",padding:"25px",borderRadius:"12px",width:"350px"};
-
-const saveBtn={background:"#2563eb",color:"white",border:"none",padding:"8px 14px",borderRadius:"6px"};
-const cancelBtn={background:"gray",color:"white",border:"none",padding:"8px 14px",borderRadius:"6px"};
-
 
 export default Tasks;

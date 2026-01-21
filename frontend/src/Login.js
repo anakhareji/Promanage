@@ -1,16 +1,17 @@
 import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 
-function Login(props) {
-
+function Login({ setUser }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("admin");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   function handleLogin() {
     setError("");
 
-    fetch("http://127.0.0.1:8000/login/", {
+    fetch("http://localhost:8000/login/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -28,20 +29,12 @@ function Login(props) {
       })
       .then(data => {
         console.log("LOGIN SUCCESS:", data);
+        setUser(data);
 
-        props.setName(data.name);
-        props.setUser(data);
-
-        // 🔥 ROLE BASED REDIRECT
-        if (data.role === "admin") {
-          props.setPage("admin");
-        } 
-        else if (data.role === "manager") {
-          props.setPage("manager");
-        }
-        else {
-          props.setPage("home");
-        }
+        // Redirect based on role
+        if (data.role === "admin") navigate("/admin/dashboard");
+        else if (data.role === "manager") navigate("/manager/dashboard");
+        else navigate("/");
       })
       .catch(err => {
         console.log("LOGIN ERROR:", err.message);
@@ -50,94 +43,58 @@ function Login(props) {
   }
 
   return (
-    <div style={container}>
-      <div style={card}>
-        <h2 style={title}>ProManage Login</h2>
+    <div className="flex-item-center" style={{ minHeight: "100vh", justifyContent: "center", background: "var(--bg-dark)" }}>
+      <div className="card" style={{ width: "350px" }}>
+        <h2 className="text-center" style={{ color: "var(--primary)", marginBottom: "1.5rem" }}>ProManage Login</h2>
 
-        {error && <p style={errorStyle}>{error}</p>}
+        {error && <div className="text-center" style={{ color: "var(--danger)", marginBottom: "1rem" }}>{error}</div>}
 
-        <input
-          style={input}
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-        />
+        <div className="form-group">
+          <label className="form-label">Email</label>
+          <input
+            className="form-input"
+            placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
+        </div>
 
-        <input
-          style={input}
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
+        <div className="form-group">
+          <label className="form-label">Password</label>
+          <input
+            className="form-input"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+          />
+        </div>
 
-        <select
-          style={input}
-          value={role}
-          onChange={e => setRole(e.target.value)}
-        >
-          <option value="admin">Admin</option>
-          <option value="manager">Manager</option>
-          <option value="member">Member</option>
-        </select>
+        <div className="form-group">
+          <label className="form-label">Role</label>
+          <select
+            className="form-input"
+            value={role}
+            onChange={e => setRole(e.target.value)}
+            style={{ color: "var(--text-main)", backgroundColor: "rgba(0,0,0,0.2)" }}
+          >
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+          </select>
+        </div>
 
-        <button style={btn} onClick={handleLogin}>
+        <button className="btn btn-primary btn-full" onClick={handleLogin}>
           Login
         </button>
+        
+        <div className="text-center mt-4">
+          <span style={{ color: "var(--text-muted)" }}>Don't have an account? </span>
+          <Link to="/register" style={{ color: "var(--primary)", textDecoration: "none" }}>Sign up</Link>
+        </div>
+
       </div>
     </div>
   );
 }
-
-/* ---------- UI STYLES ---------- */
-
-const container = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "85vh",
-  background: "#f2f4f8"
-};
-
-const card = {
-  background: "white",
-  padding: "30px",
-  width: "330px",
-  borderRadius: "12px",
-  boxShadow: "0 6px 15px rgba(0,0,0,0.25)"
-};
-
-const title = {
-  textAlign: "center",
-  color: "#2563eb",
-  marginBottom: "20px"
-};
-
-const input = {
-  width: "100%",
-  padding: "10px",
-  marginBottom: "12px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  fontSize: "14px"
-};
-
-const btn = {
-  width: "100%",
-  padding: "10px",
-  background: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  fontSize: "16px",
-  cursor: "pointer"
-};
-
-const errorStyle = {
-  color: "red",
-  textAlign: "center",
-  marginBottom: "10px",
-  fontWeight: "bold"
-};
 
 export default Login;
